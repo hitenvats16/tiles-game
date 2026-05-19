@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: 'Patrick Hand', system-ui, sans-serif;
+  background-color: #fdfaf2;
+  color: #1f1d1d;
+  /* paper grid */
+  background-image:
+    radial-gradient(rgba(31, 29, 29, 0.07) 1px, transparent 1px);
+  background-size: 18px 18px;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .scribble-card {
+    @apply bg-paper border-2 border-ink rounded-2xl shadow-scribble;
+  }
+  .scribble-btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl border-2 border-ink bg-paper text-ink font-sketch text-lg shadow-scribbleSm transition-all hover:-translate-y-0.5 hover:shadow-scribble active:translate-y-0 active:shadow-none;
+  }
+  .scribble-btn-primary {
+    @apply scribble-btn bg-ink text-paper;
+  }
+  .scribble-input {
+    @apply w-full px-3 py-2 rounded-xl border-2 border-ink bg-paper outline-none font-sketch text-lg focus:shadow-scribbleSm transition-shadow;
+  }
+  .scribble-title {
+    @apply font-sketch text-ink;
+  }
+}
+
+/* doodle underline */
+.doodle-underline {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 8'><path d='M2 5 Q 50 1 100 5 T 198 5' fill='none' stroke='%231f1d1d' stroke-width='2' stroke-linecap='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: bottom left;
+  background-size: 100% 8px;
+  padding-bottom: 6px;
+}
+
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
