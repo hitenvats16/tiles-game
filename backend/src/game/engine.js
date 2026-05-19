@@ -119,13 +119,13 @@ export async function attemptClaim({ roomId, userId, x, y }) {
     throw new GameError(ERROR_CODES.OWNED);
   }
 
-  const cooldownEndsAt = nowMs + GAME.COOLDOWN_SEC * 1000;
+  const cooldownMs = GAME.COOLDOWN_SEC * 1000;
 
   const pipeline = redis.multi();
   pipeline.hset(REDIS_KEYS.grid(roomId), cellKey(x, y), userId);
   pipeline.hincrby(REDIS_KEYS.scores(roomId), userId, 1);
   if (prevOwner) pipeline.hincrby(REDIS_KEYS.scores(roomId), prevOwner, -1);
-  pipeline.set(cdKey, '1', 'PX', GAME.COOLDOWN_SEC * 1000);
+  pipeline.set(cdKey, '1', 'PX', cooldownMs);
   if (!firstMoveDone) pipeline.set(REDIS_KEYS.firstMoveDone(roomId, userId), '1');
   await pipeline.exec();
 
@@ -146,7 +146,7 @@ export async function attemptClaim({ roomId, userId, x, y }) {
     })
     .catch((e) => console.error('[claim persist]', e.message));
 
-  return { x, y, owner: userId, prevOwner, cooldownEndsAt };
+  return { x, y, owner: userId, prevOwner, cooldownMs };
 }
 
 export async function resetRoomCache(roomId) {

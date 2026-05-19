@@ -17,6 +17,7 @@ import {
   startLeaderboardTick,
   startClockTick,
   scheduleRoomEnd,
+  stopRoomTimers,
 } from '../lifecycle.js';
 import { broadcastRoomChange } from '../lobby.js';
 
@@ -86,6 +87,45 @@ export function makeRoomJoinHandler(io, socket) {
     if (isNewMember) broadcastRoomChange(roomId).catch(() => {});
 
     return snapshotResponse(meta, grid, scores);
+  };
+}
+
+export function makeRoomLeaveHandler(io, socket) {
+  const user = socket.data.user;
+
+  return async () => {
+    const roomId = socket.data.roomId;
+    if (!roomId) return { left: false };
+
+    socket.leave(SOCKET_ROOM.forRoom(roomId));
+    socket.data.roomId = null;
+
+    const remaining = await io.in(SOCKET_ROOM.forRoom(roomId)).fetchSockets();
+    const stillHere = remaining.some((s) => s.data.user?.id === user.id);
+    if (stillHere) return { left: true };
+
+    await redis.srem(REDIS_KEYS.members(roomId), user.id);
+
+    const room = await prisma.room
+      .findUnique({ where: { id: roomId }, select: { status: true } })
+      .catch(() => null);
+
+    let membershipChanged = false;
+    if (room?.status === RoomStatus.WAITING) {
+      const deleted = await prisma.roomMember
+        .delete({ where: { roomId_userId: { roomId, userId: user.id } } })
+        .catch(() => null);
+      membershipChanged = !!deleted;
+    }
+
+    socket.to(SOCKET_ROOM.forRoom(roomId)).emit(SOCKET_EVENTS.MEMBER_LEFT, {
+      userId: user.id,
+    });
+
+    if (membershipChanged) broadcastRoomChange(roomId).catch(() => {});
+    if (remaining.length === 0) stopRoomTimers(roomId);
+
+    return { left: true };
   };
 }
 

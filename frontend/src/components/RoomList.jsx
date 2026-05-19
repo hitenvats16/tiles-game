@@ -11,7 +11,7 @@ function badge(status) {
   return STATUS_LABEL[status] || status;
 }
 
-export default function RoomList({ rooms, loading, onJoin, onRefresh }) {
+export default function RoomList({ rooms, loading, onJoin, onRefresh, onCreate }) {
   if (loading && rooms.length === 0) {
     return (
       <div className="text-center py-20 font-sketch text-2xl animate-wobble">
@@ -24,7 +24,15 @@ export default function RoomList({ rooms, loading, onJoin, onRefresh }) {
       <div className="text-center py-20 space-y-4">
         <p className="font-sketch text-2xl">no rooms going right now.</p>
         <p className="font-sketch text-lg text-ink/60">be the first to start one.</p>
-        <button onClick={onRefresh} className="scribble-btn">refresh</button>
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+          <button onClick={onRefresh} className="scribble-btn">refresh</button>
+          {onCreate && (
+            <button onClick={onCreate} className="scribble-btn-primary">
+              <span aria-hidden className="text-2xl leading-none">+</span>
+              create room
+            </button>
+          )}
+        </div>
       </div>
     );
   }

@@ -6,6 +6,7 @@ export const SOCKET_EVENTS = {
 
   // Client → Server
   ROOM_JOIN: 'room:join',
+  ROOM_LEAVE: 'room:leave',
   ROOM_SYNC: 'room:sync',
   TILE_CLAIM: 'tile:claim',
   LOBBY_SUBSCRIBE: 'lobby:subscribe',

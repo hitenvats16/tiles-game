@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
-const MIN_SCALE = 0.2;
 const MAX_SCALE = 40;
 
 export default function GameCanvas({
@@ -20,6 +19,9 @@ export default function GameCanvas({
   const pointers = useRef(new Map());
   const dragging = useRef(null);
   const pinch = useRef(null);
+  // Mirrors latest size/gridSize/minScale for zoomAt + clampView so that
+  // stale closures inside the native wheel listener still read fresh values.
+  const cfgRef = useRef({ w: 0, h: 0, gridSize: 0, minScale: 0 });
 
   // Resize observer
   useEffect(() => {
@@ -33,13 +35,28 @@ export default function GameCanvas({
     return () => ro.disconnect();
   }, []);
 
+  const minScale = size.w && size.h && gridSize
+    ? Math.min(size.w, size.h) / gridSize
+    : 0;
+  cfgRef.current = { w: size.w, h: size.h, gridSize, minScale };
+
+  function clampView() {
+    const view = viewRef.current;
+    const { w, h, gridSize: gs } = cfgRef.current;
+    const gw = gs * view.scale;
+    view.tx = gw <= w
+      ? (w - gw) / 2
+      : Math.min(0, Math.max(w - gw, view.tx));
+    view.ty = gw <= h
+      ? (h - gw) / 2
+      : Math.min(0, Math.max(h - gw, view.ty));
+  }
+
   // Fit grid initially
   useEffect(() => {
     if (!size.w || !size.h || !gridSize) return;
-    const fit = Math.min(size.w, size.h) / gridSize;
-    viewRef.current.scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, fit));
-    viewRef.current.tx = (size.w - gridSize * viewRef.current.scale) / 2;
-    viewRef.current.ty = (size.h - gridSize * viewRef.current.scale) / 2;
+    viewRef.current.scale = minScale;
+    clampView();
     draw();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [size.w, size.h, gridSize]);
@@ -142,15 +159,20 @@ export default function GameCanvas({
 
   function zoomAt(clientX, clientY, factor) {
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     const px = clientX - rect.left;
     const py = clientY - rect.top;
     const view = viewRef.current;
-    const nextScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, view.scale * factor));
+    const { minScale: ms } = cfgRef.current;
+    if (!ms) return;
+    const effectiveMax = Math.max(MAX_SCALE, ms);
+    const nextScale = Math.max(ms, Math.min(effectiveMax, view.scale * factor));
     const ratio = nextScale / view.scale;
     view.tx = px - (px - view.tx) * ratio;
     view.ty = py - (py - view.ty) * ratio;
     view.scale = nextScale;
+    clampView();
     draw();
   }
 
@@ -217,6 +239,7 @@ export default function GameCanvas({
         drag.moved = true;
         viewRef.current.tx += dx;
         viewRef.current.ty += dy;
+        clampView();
         drag.x = e.clientX;
         drag.y = e.clientY;
         draw();

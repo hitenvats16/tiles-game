@@ -17,7 +17,9 @@ export function withAck(handler) {
         });
       }
       if (e instanceof GameError) {
-        return ack?.({ ok: false, code: e.code, error: e.message });
+        const payload = { ok: false, code: e.code, error: e.message };
+        if (typeof e.remainingMs === 'number') payload.remainingMs = e.remainingMs;
+        return ack?.(payload);
       }
       console.error('[socket]', e);
       ack?.({

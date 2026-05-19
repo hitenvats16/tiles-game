@@ -39,10 +39,12 @@ export function useGameRoom(roomId) {
   const gridRef = useRef({});
   const scoresRef = useRef({});
   const metaRef = useRef(null);
+  const cooldownEndsAtRef = useRef(0);
 
   useEffect(() => { gridRef.current = grid; }, [grid]);
   useEffect(() => { scoresRef.current = scores; }, [scores]);
   useEffect(() => { metaRef.current = meta; }, [meta]);
+  useEffect(() => { cooldownEndsAtRef.current = cooldownEndsAt; }, [cooldownEndsAt]);
 
   function ingestClock(payload) {
     if (!payload) return;
@@ -155,6 +157,7 @@ export function useGameRoom(roomId) {
     return () => {
       for (const [evt, fn] of Object.entries(handlers)) socket.off(evt, fn);
       socket.io.off(SOCKET_EVENTS.RECONNECT, join);
+      if (socket.connected) socket.emit(SOCKET_EVENTS.ROOM_LEAVE);
       stopMusic();
       stopLobbyMusic();
     };
@@ -166,10 +169,19 @@ export function useGameRoom(roomId) {
       if (!socket || !selfId) return resolve({ ok: false, error: 'No socket' });
 
       const key = `${x}:${y}`;
+
+      const now = Date.now();
+      const cdRemaining = cooldownEndsAtRef.current - now;
+      if (cdRemaining > 0) {
+        setLastClaimError({ at: now, code: ERROR_CODES.COOLDOWN });
+        playSound('error');
+        return resolve({ ok: false, code: ERROR_CODES.COOLDOWN, remainingMs: cdRemaining });
+      }
+
       const ownsAny = (scoresRef.current?.[selfId] || 0) > 0;
       const gridSize = metaRef.current?.gridSize;
       if (ownsAny && gridSize && !hasAdjacentOwn(gridRef.current, selfId, x, y, gridSize)) {
-        setLastClaimError({ at: Date.now(), code: ERROR_CODES.NOT_ADJACENT });
+        setLastClaimError({ at: now, code: ERROR_CODES.NOT_ADJACENT });
         playSound('error');
         return resolve({ ok: false, code: ERROR_CODES.NOT_ADJACENT });
       }
@@ -193,10 +205,15 @@ export function useGameRoom(roomId) {
             return { ...g, [key]: prevOwner };
           });
           setLastClaimError({ at: Date.now(), code: resp?.code, message: resp?.error });
+          if (resp?.code === ERROR_CODES.COOLDOWN && typeof resp.remainingMs === 'number') {
+            setCooldownEndsAt(Date.now() + resp.remainingMs);
+          }
           playSound('error');
         } else {
           setLastClaimError(null);
-          if (resp.cooldownEndsAt) setCooldownEndsAt(resp.cooldownEndsAt);
+          if (typeof resp.cooldownMs === 'number') {
+            setCooldownEndsAt(Date.now() + resp.cooldownMs);
+          }
         }
         resolve(resp);
       });
