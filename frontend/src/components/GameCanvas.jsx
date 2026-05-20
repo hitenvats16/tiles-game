@@ -6,6 +6,9 @@ export default function GameCanvas({
   gridSize,
   grid,
   colors,
+  usernames,
+  cursors,
+  onCursorMove,
   selfId,
   selfColor,
   disabled,
@@ -14,6 +17,7 @@ export default function GameCanvas({
   const canvasRef = useRef(null);
   const wrapRef = useRef(null);
   const viewRef = useRef({ scale: 1, tx: 0, ty: 0 });
+  const [view, setView] = useState({ scale: 1, tx: 0, ty: 0 });
   const [hover, setHover] = useState(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const pointers = useRef(new Map());
@@ -52,11 +56,21 @@ export default function GameCanvas({
       : Math.min(0, Math.max(h - gw, view.ty));
   }
 
+  function syncView() {
+    const v = viewRef.current;
+    setView((prev) =>
+      prev.scale === v.scale && prev.tx === v.tx && prev.ty === v.ty
+        ? prev
+        : { scale: v.scale, tx: v.tx, ty: v.ty }
+    );
+  }
+
   // Fit grid initially
   useEffect(() => {
     if (!size.w || !size.h || !gridSize) return;
     viewRef.current.scale = minScale;
     clampView();
+    syncView();
     draw();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [size.w, size.h, gridSize]);
@@ -99,13 +113,13 @@ export default function GameCanvas({
     const x1 = Math.min(gridSize, Math.ceil((w - tx) / scale));
     const y1 = Math.min(gridSize, Math.ceil((h - ty) / scale));
 
-    // Cells
+    // Cells — own cells full alpha, others dimmed to ~80%
     for (let y = y0; y < y1; y++) {
       for (let x = x0; x < x1; x++) {
         const owner = grid[`${x}:${y}`];
         if (!owner) continue;
         const color = colors[owner] || '#888';
-        ctx.fillStyle = color;
+        ctx.fillStyle = owner === selfId ? color : color + 'cc';
         ctx.fillRect(x * scale, y * scale, scale + 0.5, scale + 0.5);
       }
     }
@@ -141,9 +155,16 @@ export default function GameCanvas({
     }
 
     ctx.restore();
-  }, [grid, colors, gridSize, hover, disabled, selfColor]);
+  }, [grid, colors, gridSize, hover, disabled, selfColor, selfId]);
 
   useEffect(() => { draw(); }, [draw]);
+
+  // Broadcast our hover cell to peers (and clear when we leave the canvas).
+  useEffect(() => {
+    if (!onCursorMove) return;
+    if (hover) onCursorMove(hover.x, hover.y);
+    else onCursorMove(null, null);
+  }, [hover, onCursorMove]);
 
   function screenToCell(clientX, clientY) {
     const canvas = canvasRef.current;
@@ -173,6 +194,7 @@ export default function GameCanvas({
     view.ty = py - (py - view.ty) * ratio;
     view.scale = nextScale;
     clampView();
+    syncView();
     draw();
   }
 
@@ -240,6 +262,7 @@ export default function GameCanvas({
         viewRef.current.tx += dx;
         viewRef.current.ty += dy;
         clampView();
+        syncView();
         drag.x = e.clientX;
         drag.y = e.clientY;
         draw();
@@ -266,7 +289,7 @@ export default function GameCanvas({
   return (
     <div
       ref={wrapRef}
-      className="relative w-full h-full bg-paper border-2 border-ink rounded-2xl overflow-hidden no-select touch-none"
+      className="relative w-full h-full bg-paper rounded-2xl overflow-hidden no-select touch-none sketchy"
       onContextMenu={(e) => e.preventDefault()}
     >
       <canvas
@@ -299,10 +322,52 @@ export default function GameCanvas({
         </button>
       </div>
       {hover && !disabled && (
-        <div className="absolute top-3 left-3 bg-paper border-2 border-ink rounded-xl px-2 py-1 font-sketch text-sm z-10">
+        <div className="absolute top-3 left-3 bg-paper rounded-xl px-2 py-1 font-sketch text-sm z-10 sketchy">
           ({hover.x}, {hover.y})
         </div>
       )}
+      {cursors && Object.entries(cursors).map(([uid, pos]) => {
+        if (uid === selfId || !pos || pos.x == null || pos.y == null) return null;
+        const color = (colors && colors[uid]) || '#888';
+        const name = (usernames && usernames[uid]) || 'player';
+        const cellPx = view.scale;
+        const left = view.tx + pos.x * cellPx + cellPx / 2;
+        const top = view.ty + pos.y * cellPx + cellPx / 2;
+        return (
+          <div
+            key={uid}
+            className="absolute pointer-events-none z-20"
+            style={{ left, top, transform: 'translate(-50%, -50%)' }}
+          >
+            <div
+              className="absolute"
+              style={{
+                left: '50%',
+                top: '50%',
+                width: Math.max(10, Math.min(18, cellPx * 0.4)),
+                height: Math.max(10, Math.min(18, cellPx * 0.4)),
+                transform: 'translate(-50%, -50%)',
+                borderRadius: '9999px',
+                backgroundColor: color,
+                border: '2px solid #1f1d1d',
+              }}
+            />
+            <div
+              className="absolute font-sketch text-xs px-1.5 py-0.5 rounded-md whitespace-nowrap"
+              style={{
+                left: '50%',
+                bottom: `calc(50% + ${Math.max(10, Math.min(18, cellPx * 0.4)) / 2 + 4}px)`,
+                transform: 'translateX(-50%)',
+                backgroundColor: '#fdfaf2',
+                border: `2px solid ${color}`,
+                color: '#1f1d1d',
+              }}
+            >
+              {name}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

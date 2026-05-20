@@ -8,6 +8,7 @@ export const SOCKET_EVENTS = {
   ROOM_LEAVE: 'room:leave',
   ROOM_SYNC: 'room:sync',
   TILE_CLAIM: 'tile:claim',
+  CURSOR_MOVE: 'cursor:move',
   LOBBY_SUBSCRIBE: 'lobby:subscribe',
   LOBBY_UNSUBSCRIBE: 'lobby:unsubscribe',
 
@@ -19,6 +20,7 @@ export const SOCKET_EVENTS = {
   GAME_ENDED: 'game:ended',
   MEMBER_JOINED: 'member:joined',
   MEMBER_LEFT: 'member:left',
+  CURSOR_UPDATE: 'cursor:update',
   LOBBY_ROOM_UPSERT: 'lobby:room_upsert',
   LOBBY_ROOM_REMOVE: 'lobby:room_remove',
 };

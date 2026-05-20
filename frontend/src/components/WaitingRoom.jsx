@@ -17,7 +17,7 @@ export default function WaitingRoom({ room, isOwner, onStart }) {
           {room.members.map((m) => (
             <div
               key={m.user.id}
-              className="flex items-center gap-1 border-2 border-ink rounded-full px-2 py-0.5"
+              className="flex items-center gap-1 rounded-full px-2 py-0.5 sketchy"
             >
               <div
                 className="w-3 h-3 rounded-full border border-ink"

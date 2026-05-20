@@ -28,6 +28,7 @@ export function useGameRoom(roomId) {
   const [meta, setMeta] = useState(null);
   const [grid, setGrid] = useState({});
   const [scores, setScores] = useState({});
+  const [cursors, setCursors] = useState({});
   const [clock, setClock] = useState(emptyClock);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState(null);
@@ -139,12 +140,27 @@ export function useGameRoom(roomId) {
         });
       },
       [SOCKET_EVENTS.MEMBER_LEFT]: ({ userId }) => {
+        setCursors((c) => {
+          if (!(userId in c)) return c;
+          const { [userId]: _, ...rest } = c;
+          return rest;
+        });
         // Only prune lobby-state leavers; once the game is ACTIVE/ENDED, keep
         // them in the leaderboard so historical scores still render.
         if (statusRef.current && statusRef.current !== ROOM_STATUS.WAITING) return;
         setRoom((r) => {
           if (!r) return r;
           return { ...r, members: r.members.filter((m) => m.user.id !== userId) };
+        });
+      },
+      [SOCKET_EVENTS.CURSOR_UPDATE]: ({ userId, x, y }) => {
+        setCursors((c) => {
+          if (x == null || y == null) {
+            if (!(userId in c)) return c;
+            const { [userId]: _, ...rest } = c;
+            return rest;
+          }
+          return { ...c, [userId]: { x, y } };
         });
       },
     };
@@ -220,6 +236,42 @@ export function useGameRoom(roomId) {
     });
   }, [selfId]);
 
+  const cursorThrottleRef = useRef({ lastAt: 0, pending: null, timer: null });
+  const sendCursor = useCallback((x, y) => {
+    const socket = socketRef.current;
+    if (!socket) return;
+    const send = (xv, yv) => socket.emit(SOCKET_EVENTS.CURSOR_MOVE, { x: xv, y: yv });
+    if (x == null || y == null) {
+      const t = cursorThrottleRef.current;
+      if (t.timer) { clearTimeout(t.timer); t.timer = null; t.pending = null; }
+      send(null, null);
+      t.lastAt = Date.now();
+      return;
+    }
+    const now = Date.now();
+    const t = cursorThrottleRef.current;
+    const elapsed = now - t.lastAt;
+    if (elapsed >= 60) {
+      t.lastAt = now;
+      t.pending = null;
+      if (t.timer) { clearTimeout(t.timer); t.timer = null; }
+      send(x, y);
+    } else {
+      t.pending = { x, y };
+      if (!t.timer) {
+        t.timer = setTimeout(() => {
+          t.timer = null;
+          const p = t.pending;
+          t.pending = null;
+          if (p) {
+            t.lastAt = Date.now();
+            send(p.x, p.y);
+          }
+        }, 60 - elapsed);
+      }
+    }
+  }, []);
+
   const startGame = useCallback(async () => {
     try {
       const { room } = await api.startRoom(roomId);
@@ -235,6 +287,7 @@ export function useGameRoom(roomId) {
     meta,
     grid,
     scores,
+    cursors,
     clock,
     connected,
     error,
@@ -243,5 +296,6 @@ export function useGameRoom(roomId) {
     endedAt,
     claim,
     startGame,
+    sendCursor,
   };
 }

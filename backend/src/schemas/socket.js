@@ -11,3 +11,8 @@ export const tileClaimSchema = z.object({
 });
 
 export const roomSyncSchema = z.object({}).optional().nullable();
+
+export const cursorMoveSchema = z.object({
+  x: z.number().int().min(0).max(GAME.GRID_MAX - 1).nullable(),
+  y: z.number().int().min(0).max(GAME.GRID_MAX - 1).nullable(),
+});

@@ -23,6 +23,7 @@ export default function GameScreen() {
     meta,
     grid,
     scores,
+    cursors,
     clock,
     connected,
     error,
@@ -31,6 +32,7 @@ export default function GameScreen() {
     endedAt,
     claim,
     startGame,
+    sendCursor,
   } = useGameRoom(id);
 
   const [toast, setToast] = useState(null);
@@ -45,6 +47,12 @@ export default function GameScreen() {
   const colors = useMemo(() => {
     const map = {};
     for (const m of room?.members || []) map[m.user.id] = m.user.color;
+    return map;
+  }, [room]);
+
+  const usernames = useMemo(() => {
+    const map = {};
+    for (const m of room?.members || []) map[m.user.id] = m.user.username;
     return map;
   }, [room]);
 
@@ -108,6 +116,9 @@ export default function GameScreen() {
                 gridSize={meta.gridSize}
                 grid={grid}
                 colors={colors}
+                usernames={usernames}
+                cursors={cursors}
+                onCursorMove={isActive ? sendCursor : undefined}
                 selfId={user.id}
                 selfColor={user.color}
                 disabled={!isActive}
@@ -122,7 +133,7 @@ export default function GameScreen() {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-paper border-2 border-ink rounded-xl px-3 py-1 font-sketch text-base shadow-scribbleSm"
+                  className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-paper rounded-xl px-3 py-1 font-sketch text-base shadow-scribbleSm sketchy"
                 >
                   {toast.label}
                 </motion.div>

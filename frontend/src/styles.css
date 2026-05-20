@@ -26,19 +26,33 @@ body {
 
 @layer components {
   .scribble-card {
-    @apply bg-paper border-2 border-ink rounded-2xl shadow-scribble;
+    @apply bg-paper rounded-2xl shadow-scribble sketchy;
   }
   .scribble-btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl border-2 border-ink bg-paper text-ink font-sketch text-lg shadow-scribbleSm transition-all hover:-translate-y-0.5 hover:shadow-scribble active:translate-y-0 active:shadow-none;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-paper text-ink font-sketch text-lg shadow-scribbleSm transition-all hover:-translate-y-0.5 hover:shadow-scribble active:translate-y-0 active:shadow-none sketchy;
   }
   .scribble-btn-primary {
     @apply scribble-btn bg-ink text-paper;
   }
   .scribble-input {
-    @apply w-full px-3 py-2 rounded-xl border-2 border-ink bg-paper outline-none font-sketch text-lg focus:shadow-scribbleSm transition-shadow;
+    @apply w-full px-3 py-2 rounded-xl bg-paper outline-none font-sketch text-lg focus:shadow-scribbleSm transition-shadow sketchy;
   }
   .scribble-title {
     @apply font-sketch text-ink;
+  }
+  /* Hand-drawn jagged border: applies an SVG turbulence filter to a pseudo
+     element so the outline wobbles while inner text stays crisp. */
+  .sketchy {
+    position: relative;
+  }
+  .sketchy::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 2px solid #1f1d1d;
+    pointer-events: none;
+    filter: url(#rough-filter);
   }
 }
 

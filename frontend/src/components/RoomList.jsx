@@ -52,7 +52,7 @@ export default function RoomList({ rooms, loading, onJoin, onRefresh, onCreate }
         >
           <div className="flex items-center justify-between">
             <span className="font-sketch text-2xl truncate">{room.name}</span>
-            <span className="font-sketch text-xs px-2 py-0.5 rounded-full border-2 border-ink bg-paper">
+            <span className="font-sketch text-xs px-2 py-0.5 rounded-full bg-paper sketchy">
               {badge(room.status)}
             </span>
           </div>

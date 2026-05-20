@@ -28,7 +28,7 @@ export default function CooldownBar({ cooldownEndsAt }) {
           {active ? `${(remaining / 1000).toFixed(1)}s` : 'ready ✓'}
         </motion.span>
       </div>
-      <div className="h-3 rounded-full border-2 border-ink bg-paper overflow-hidden">
+      <div className="h-3 rounded-full bg-paper overflow-hidden sketchy">
         <motion.div
           animate={{ width: `${pct * 100}%` }}
           transition={{ ease: 'linear', duration: 0.1 }}
