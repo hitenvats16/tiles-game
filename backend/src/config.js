@@ -10,6 +10,8 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().min(1).default(''),
   JWT_SECRET: z.string().min(1).default('dev-secret-change-me'),
   JWT_EXPIRES_IN: z.string().default('30d'),
+  SENTRY_DSN: z.string().default(''),
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -37,5 +39,9 @@ export const config = {
     googleClientId: env.GOOGLE_CLIENT_ID,
     jwtSecret: env.JWT_SECRET,
     jwtExpiresIn: env.JWT_EXPIRES_IN,
+  },
+  sentry: {
+    dsn: env.SENTRY_DSN,
+    tracesSampleRate: env.SENTRY_TRACES_SAMPLE_RATE,
   },
 };
